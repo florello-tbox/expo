@@ -110,7 +110,10 @@ let mediaRecorderUptimeOfLastStartResume: number = 0;
 let mediaRecorderDurationAlreadyRecorded: number = 0;
 let mediaRecorderIsRecording: boolean = false;
 let audioChunks: Blob[] = [];
-let volumeLevel = 0;
+
+let analyser: null | AnalyserNode = null
+let fftSize = 1024
+let timeData = new Uint8Array(fftSize)
 
 function getAudioRecorderDurationMillis() {
   let duration = mediaRecorderDurationAlreadyRecorded;
@@ -202,6 +205,26 @@ export default {
   /* Recording */
   //   async setUnloadedCallbackForAndroidRecording() {},
   async getAudioRecordingStatus() {
+    let volumeLevel = 0
+    let float = 0
+    let total = 0
+    let i = 0
+    let rms = 0
+
+    if (analyser) {
+      analyser.getByteTimeDomainData(timeData);
+      while ( i < fftSize ) {
+        float = ( timeData[i++] / 0x80 ) - 1;
+        total += ( float * float );
+      }
+
+      rms = Math.sqrt(total / fftSize);
+
+      volumeLevel  = 20 * ( Math.log(rms) / Math.log(10) );
+      // sanity check
+      volumeLevel = Math.max(-30, Math.min(volumeLevel, 0));
+    }
+
     return {
       canRecord: mediaRecorder?.state === 'recording' || mediaRecorder?.state === 'inactive',
       isRecording: mediaRecorder?.state === 'recording',
@@ -252,17 +275,19 @@ export default {
     audioChunks = [];
 
     const audioContext = new AudioContext();
-    const analyser = audioContext.createAnalyser();
     const microphone = audioContext.createMediaStreamSource(stream);
-    const javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
 
-    analyser.smoothingTimeConstant = 0.8;
-    analyser.fftSize = 1024;
-
+    analyser = audioContext.createAnalyser();
     microphone.connect(analyser);
-    analyser.connect(javascriptNode);
-    javascriptNode.connect(audioContext.destination);
-    javascriptNode.onaudioprocess = () => {
+    analyser.fftSize = fftSize;
+
+    //const javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
+
+    //analyser.connect(javascriptNode);
+    //javascriptNode.connect(audioContext.destination);
+
+
+    /*javascriptNode.onaudioprocess = () => {
       const array = new Uint8Array(analyser.frequencyBinCount);
       analyser.getByteFrequencyData(array);
       let values = 0;
@@ -273,7 +298,7 @@ export default {
       }
 
       volumeLevel = values / length;
-    };
+    };*/
 
     return { uri: null, status: await this.getAudioRecordingStatus() };
   },
@@ -333,6 +358,7 @@ export default {
   },
   async unloadAudioRecorder() {
     mediaRecorder = null;
+    analyser = null;
     return this.getAudioRecordingStatus();
   },
 
