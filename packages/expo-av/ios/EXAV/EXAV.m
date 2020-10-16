@@ -514,6 +514,7 @@ withEXVideoViewForTag:(nonnull NSNumber *)reactTag
                                                              error:&error];
   if (error == nil) {
     _audioRecorder = recorder;
+    _audioRecorder.meteringEnabled = YES;
   }
   return error;
 }
@@ -527,9 +528,15 @@ withEXVideoViewForTag:(nonnull NSNumber *)reactTag
 {
   if (_audioRecorder) {
     int durationMillisFromRecorder = [self _getDurationMillisOfRecordingAudioRecorder];
+    [_audioRecorder updateMeters];
+    float _currentMetering = [_audioRecorder averagePowerForChannel: 0];
+    float _currentPeakMetering = [_audioRecorder peakPowerForChannel:0];
+
     // After stop, the recorder's duration goes to zero, so we replace it with the correct duration in this case.
     int durationMillis = durationMillisFromRecorder == 0 ? _audioRecorderDurationMillis : durationMillisFromRecorder;
     return @{@"canRecord": @(YES),
+             @"_currentPeakMetering": @(_currentPeakMetering),
+             @"_currentMetering": @(_currentMetering),
              @"isRecording": @([_audioRecorder isRecording]),
              @"durationMillis": @(durationMillis)};
   } else {

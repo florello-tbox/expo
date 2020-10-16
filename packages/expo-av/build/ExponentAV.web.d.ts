@@ -1,4 +1,10 @@
+import { PermissionResponse } from 'unimodules-permissions-interface';
 import { AVPlaybackNativeSource, AVPlaybackStatus, AVPlaybackStatusToSet } from './AV';
+/**
+ * Gets the permission details. The implementation is not very good as it actually requests
+ * access to the microhpone, not all browsers support the experimental permissions api
+ */
+declare function getPermissionsAsync(): Promise<PermissionResponse>;
 declare const _default: {
     readonly name: string;
     getStatusForVideo(element: HTMLMediaElement): Promise<AVPlaybackStatus>;
@@ -16,11 +22,46 @@ declare const _default: {
     unloadForSound(element: HTMLMediaElement): Promise<AVPlaybackStatus>;
     setStatusForSound(element: HTMLMediaElement, status: AVPlaybackStatusToSet): Promise<AVPlaybackStatus>;
     replaySound(element: HTMLMediaElement, status: AVPlaybackStatusToSet): Promise<AVPlaybackStatus>;
-    getAudioRecordingStatus(): Promise<void>;
-    prepareAudioRecorder(): Promise<void>;
-    startAudioRecording(): Promise<void>;
-    pauseAudioRecording(): Promise<void>;
-    stopAudioRecording(): Promise<void>;
+    getAudioRecordingStatus(): Promise<{
+        canRecord: boolean;
+        isRecording: boolean;
+        durationMillis: number;
+    }>;
+    prepareAudioRecorder(options: any): Promise<{
+        uri: null;
+        status: {
+            canRecord: boolean;
+            isRecording: boolean;
+            durationMillis: number;
+        };
+    }>;
+    startAudioRecording(): Promise<{
+        canRecord: boolean;
+        isRecording: boolean;
+        durationMillis: number;
+    }>;
+    pauseAudioRecording(): Promise<{
+        canRecord: boolean;
+        isRecording: boolean;
+        durationMillis: number;
+    }>;
+    stopAudioRecording(): Promise<{
+        uri: null;
+        status: {
+            canRecord: boolean;
+            isRecording: boolean;
+            durationMillis: number;
+        };
+    } | {
+        uri: string;
+        status: {
+            canRecord: boolean;
+            isRecording: boolean;
+            durationMillis: number;
+        };
+    }>;
     unloadAudioRecorder(): Promise<void>;
+    getPermissionsAsync: typeof getPermissionsAsync;
+    requestPermissionsAsync(): Promise<PermissionResponse>;
 };
 export default _default;

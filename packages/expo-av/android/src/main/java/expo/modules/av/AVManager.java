@@ -537,7 +537,16 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
   private Bundle getAudioRecorderStatus() {
     final Bundle map = new Bundle();
     if (mAudioRecorder != null) {
+      int maxAmplitude = 0;
+      maxAmplitude = mAudioRecorder.getMaxAmplitude();
+      double dB = -160;
+      if (maxAmplitude > 0) {
+        dB = 120 - (20 * Math.log10(maxAmplitude / 0.08)); 
+      }
+
       map.putBoolean("canRecord", true);
+      map.putDouble("_currentPeakMetering", dB);
+      map.putDouble("_currentMetering", dB);
       map.putBoolean("isRecording", mAudioRecorderIsRecording);
       map.putInt("durationMillis", (int) getAudioRecorderDurationMillis());
     }

@@ -1,6 +1,28 @@
 import { SyntheticPlatformEmitter } from '@unimodules/core';
+import { PermissionResponse, PermissionStatus } from 'unimodules-permissions-interface';
 
 import { AVPlaybackNativeSource, AVPlaybackStatus, AVPlaybackStatusToSet } from './AV';
+import { RECORDING_OPTIONS_PRESET_HIGH_QUALITY } from './Audio/Recording';
+
+/**
+ * Gets the permission details. The implementation is not very good as it actually requests
+ * access to the microhpone, not all browsers support the experimental permissions api
+ */
+async function getPermissionsAsync(): Promise<PermissionResponse> {
+  const resolveWithStatus = (status: PermissionStatus) => ({
+    status,
+    granted: status === PermissionStatus.GRANTED,
+    canAskAgain: true,
+    expires: 0,
+  });
+
+  try {
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+    return resolveWithStatus(PermissionStatus.GRANTED);
+  } catch (e) {
+    return resolveWithStatus(PermissionStatus.DENIED);
+  }
+}
 
 function getStatusFromMedia(media?: HTMLMediaElement): AVPlaybackStatus {
   if (!media) {
@@ -81,6 +103,19 @@ function setStatusForMedia(
   }
 
   return getStatusFromMedia(media);
+}
+
+let mediaRecorder: null | any /*MediaRecorder*/ = null;
+let mediaRecorderUptimeOfLastStartResume: number = 0;
+let mediaRecorderDurationAlreadyRecorded: number = 0;
+let mediaRecorderIsRecording: boolean = false;
+
+function getAudioRecorderDurationMillis() {
+  let duration = mediaRecorderDurationAlreadyRecorded;
+  if (mediaRecorderIsRecording && mediaRecorderUptimeOfLastStartResume > 0) {
+    duration += Date.now() - mediaRecorderUptimeOfLastStartResume;
+  }
+  return duration;
 }
 
 export default {
@@ -164,10 +199,109 @@ export default {
 
   /* Recording */
   //   async setUnloadedCallbackForAndroidRecording() {},
-  async getAudioRecordingStatus() {},
-  async prepareAudioRecorder() {},
-  async startAudioRecording() {},
-  async pauseAudioRecording() {},
-  async stopAudioRecording() {},
-  async unloadAudioRecorder() {},
+  async getAudioRecordingStatus() {
+    return {
+      canRecord: mediaRecorder?.state === 'recording' || mediaRecorder?.state === 'inactive',
+      isRecording: mediaRecorder?.state === 'recording',
+      durationMillis: getAudioRecorderDurationMillis(),
+    };
+  },
+  async prepareAudioRecorder(options) {
+    if (typeof navigator !== 'undefined' && !navigator.mediaDevices) {
+      throw new Error('No media devices available');
+    }
+
+    mediaRecorderUptimeOfLastStartResume = 0;
+    mediaRecorderDurationAlreadyRecorded = 0;
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    mediaRecorder = new (window as any).MediaRecorder(
+      stream,
+      options?.web || RECORDING_OPTIONS_PRESET_HIGH_QUALITY.web
+    );
+
+    mediaRecorder.onpause = () => {
+      mediaRecorderDurationAlreadyRecorded = getAudioRecorderDurationMillis();
+      mediaRecorderIsRecording = false;
+    };
+
+    mediaRecorder.onresume = () => {
+      mediaRecorderUptimeOfLastStartResume = Date.now();
+      mediaRecorderIsRecording = true;
+    };
+
+    mediaRecorder.onstart = () => {
+      mediaRecorderUptimeOfLastStartResume = Date.now();
+      mediaRecorderDurationAlreadyRecorded = 0;
+      mediaRecorderIsRecording = true;
+    };
+
+    mediaRecorder.onstop = () => {
+      mediaRecorderDurationAlreadyRecorded = getAudioRecorderDurationMillis();
+      mediaRecorderIsRecording = false;
+
+      // Clears recording icon in Chrome tab
+      stream.getTracks().forEach(track => track.stop());
+    };
+
+    return { uri: null, status: await this.getAudioRecordingStatus() };
+  },
+  async startAudioRecording() {
+    if (mediaRecorder === null) {
+      throw new Error(
+        'Cannot start an audio recording without initializing a MediaRecorder. Run prepareToRecordAsync() before attempting to start an audio recording.'
+      );
+    }
+
+    if (mediaRecorder.state === 'paused') {
+      mediaRecorder.resume();
+    } else {
+      mediaRecorder.start();
+    }
+
+    return this.getAudioRecordingStatus();
+  },
+  async pauseAudioRecording() {
+    if (mediaRecorder === null) {
+      throw new Error(
+        'Cannot start an audio recording without initializing a MediaRecorder. Run prepareToRecordAsync() before attempting to start an audio recording.'
+      );
+    }
+
+    // Set status to paused
+    mediaRecorder.pause();
+
+    return this.getAudioRecordingStatus();
+  },
+  async stopAudioRecording() {
+    if (mediaRecorder === null) {
+      throw new Error(
+        'Cannot start an audio recording without initializing a MediaRecorder. Run prepareToRecordAsync() before attempting to start an audio recording.'
+      );
+    }
+
+    if (mediaRecorder.state === 'inactive') {
+      return { uri: null, status: await this.getAudioRecordingStatus() };
+    }
+
+    const dataPromise = new Promise(
+      resolve => (mediaRecorder.ondataavailable = e => resolve(e.data))
+    );
+
+    mediaRecorder.stop();
+
+    const data = await dataPromise;
+    const url = URL.createObjectURL(data);
+
+    return { uri: url, status: await this.getAudioRecordingStatus() };
+  },
+  async unloadAudioRecorder() {
+    mediaRecorder = null;
+  },
+
+  getPermissionsAsync,
+  async requestPermissionsAsync(): Promise<PermissionResponse> {
+    return getPermissionsAsync();
+  },
 };
