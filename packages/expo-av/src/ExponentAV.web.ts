@@ -109,6 +109,8 @@ let mediaRecorder: null | any /*MediaRecorder*/ = null;
 let mediaRecorderUptimeOfLastStartResume: number = 0;
 let mediaRecorderDurationAlreadyRecorded: number = 0;
 let mediaRecorderIsRecording: boolean = false;
+let audioChunks: Blob[] = [];
+let volumeLevel = 0;
 
 function getAudioRecorderDurationMillis() {
   let duration = mediaRecorderDurationAlreadyRecorded;
@@ -203,7 +205,9 @@ export default {
     return {
       canRecord: mediaRecorder?.state === 'recording' || mediaRecorder?.state === 'inactive',
       isRecording: mediaRecorder?.state === 'recording',
+      isDoneRecording: false,
       durationMillis: getAudioRecorderDurationMillis(),
+      _currentMetering: volumeLevel,
     };
   },
   async prepareAudioRecorder(options) {
@@ -221,28 +225,54 @@ export default {
       options?.web || RECORDING_OPTIONS_PRESET_HIGH_QUALITY.web
     );
 
-    mediaRecorder.onpause = () => {
+    mediaRecorder.addEventListener('pause', () => {
       mediaRecorderDurationAlreadyRecorded = getAudioRecorderDurationMillis();
       mediaRecorderIsRecording = false;
-    };
+    });
 
-    mediaRecorder.onresume = () => {
+    mediaRecorder.addEventListener('resume', () => {
       mediaRecorderUptimeOfLastStartResume = Date.now();
       mediaRecorderIsRecording = true;
-    };
+    });
 
-    mediaRecorder.onstart = () => {
+    mediaRecorder.addEventListener('start', () => {
       mediaRecorderUptimeOfLastStartResume = Date.now();
       mediaRecorderDurationAlreadyRecorded = 0;
       mediaRecorderIsRecording = true;
-    };
+    });
 
-    mediaRecorder.onstop = () => {
+    mediaRecorder.addEventListener('stop', () => {
       mediaRecorderDurationAlreadyRecorded = getAudioRecorderDurationMillis();
       mediaRecorderIsRecording = false;
 
       // Clears recording icon in Chrome tab
       stream.getTracks().forEach(track => track.stop());
+    });
+
+    audioChunks = [];
+
+    const audioContext = new AudioContext();
+    const analyser = audioContext.createAnalyser();
+    const microphone = audioContext.createMediaStreamSource(stream);
+    const javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
+
+    analyser.smoothingTimeConstant = 0.8;
+    analyser.fftSize = 1024;
+
+    microphone.connect(analyser);
+    analyser.connect(javascriptNode);
+    javascriptNode.connect(audioContext.destination);
+    javascriptNode.onaudioprocess = () => {
+      const array = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(array);
+      let values = 0;
+
+      const length = array.length;
+      for (let i = 0; i < length; i++) {
+        values += array[i];
+      }
+
+      volumeLevel = values / length;
     };
 
     return { uri: null, status: await this.getAudioRecordingStatus() };
@@ -258,6 +288,10 @@ export default {
       mediaRecorder.resume();
     } else {
       mediaRecorder.start();
+
+      mediaRecorder.addEventListener('dataavailable', event => {
+        audioChunks.push(event.data);
+      });
     }
 
     return this.getAudioRecordingStatus();
@@ -285,23 +319,25 @@ export default {
       return { uri: null, status: await this.getAudioRecordingStatus() };
     }
 
-    const dataPromise = new Promise(
-      resolve => (mediaRecorder.ondataavailable = e => resolve(e.data))
-    );
+    const objectUrl = new Promise(resolve => {
+      mediaRecorder.addEventListener('stop', () => {
+        const url = URL.createObjectURL(new Blob(audioChunks));
+        resolve(url);
+      });
+    });
 
-    mediaRecorder.stop();
-
-    const data = await dataPromise;
-    const url = URL.createObjectURL(data);
+    await mediaRecorder.stop();
+    const url = await objectUrl;
 
     return { uri: url, status: await this.getAudioRecordingStatus() };
   },
   async unloadAudioRecorder() {
     mediaRecorder = null;
+    return this.getAudioRecordingStatus();
   },
 
   getPermissionsAsync,
   async requestPermissionsAsync(): Promise<PermissionResponse> {
     return getPermissionsAsync();
   },
-};
+ };

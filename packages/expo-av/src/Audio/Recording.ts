@@ -374,7 +374,7 @@ export class Recording {
     }
 
     // Web has to return the URI at the end of recording, so needs a little destructuring
-    if (Platform.OS === 'web') {
+    if (Platform.OS === 'web' && stopError === undefined) {
       const { uri, status } = (stopResult as unknown) as {
         uri: string | null;
         status: RecordingStatus;

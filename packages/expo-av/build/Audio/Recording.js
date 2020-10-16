@@ -279,7 +279,7 @@ export class Recording {
             stopError = err;
         }
         // Web has to return the URI at the end of recording, so needs a little destructuring
-        if (Platform.OS === 'web') {
+        if (Platform.OS === 'web' && stopError === undefined) {
             const { uri, status } = stopResult;
             this._uri = uri;
             stopResult = status;

@@ -25,42 +25,51 @@ declare const _default: {
     getAudioRecordingStatus(): Promise<{
         canRecord: boolean;
         isRecording: boolean;
+        isDoneRecording: boolean;
         durationMillis: number;
+        _currentMetering: number;
     }>;
     prepareAudioRecorder(options: any): Promise<{
         uri: null;
         status: {
             canRecord: boolean;
             isRecording: boolean;
+            isDoneRecording: boolean;
             durationMillis: number;
+            _currentMetering: number;
         };
     }>;
     startAudioRecording(): Promise<{
         canRecord: boolean;
         isRecording: boolean;
+        isDoneRecording: boolean;
         durationMillis: number;
+        _currentMetering: number;
     }>;
     pauseAudioRecording(): Promise<{
         canRecord: boolean;
         isRecording: boolean;
+        isDoneRecording: boolean;
         durationMillis: number;
+        _currentMetering: number;
     }>;
     stopAudioRecording(): Promise<{
-        uri: null;
+        uri: unknown;
         status: {
             canRecord: boolean;
             isRecording: boolean;
+            isDoneRecording: boolean;
             durationMillis: number;
-        };
-    } | {
-        uri: string;
-        status: {
-            canRecord: boolean;
-            isRecording: boolean;
-            durationMillis: number;
+            _currentMetering: number;
         };
     }>;
-    unloadAudioRecorder(): Promise<void>;
+    unloadAudioRecorder(): Promise<{
+        canRecord: boolean;
+        isRecording: boolean;
+        isDoneRecording: boolean;
+        durationMillis: number;
+        _currentMetering: number;
+    }>;
     getPermissionsAsync: typeof getPermissionsAsync;
     requestPermissionsAsync(): Promise<PermissionResponse>;
 };
