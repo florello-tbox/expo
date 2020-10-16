@@ -222,7 +222,7 @@ export default {
 
       volumeLevel  = 20 * ( Math.log(rms) / Math.log(10) );
       // sanity check
-      volumeLevel = Math.max(-30, Math.min(volumeLevel, 0));
+      volumeLevel = Math.max(-48, Math.min(volumeLevel, 0));
     }
 
     return {
