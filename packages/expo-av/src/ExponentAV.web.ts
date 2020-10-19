@@ -43,7 +43,7 @@ function getStatusFromMedia(media?: HTMLMediaElement): AVPlaybackStatus {
     isLoaded: true,
     uri: media.src,
     progressUpdateIntervalMillis: 100, //TODO: Bacon: Add interval between calls
-    durationMillis: media.duration * 1000,
+    durationMillis: isNaN(media.duration) ? 0 : media.duration * 1000,
     positionMillis: media.currentTime * 1000,
     // playableDurationMillis: media.buffered * 1000,
     // seekMillisToleranceBefore?: number
@@ -166,6 +166,13 @@ export default {
     const media = new Audio(source);
 
     media.ontimeupdate = () => {
+      SyntheticPlatformEmitter.emit('didUpdatePlaybackStatus', {
+        key: media,
+        status: getStatusFromMedia(media),
+      });
+    };
+
+    media.onloadedmetadata = () => {
       SyntheticPlatformEmitter.emit('didUpdatePlaybackStatus', {
         key: media,
         status: getStatusFromMedia(media),
