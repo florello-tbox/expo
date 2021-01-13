@@ -222,6 +222,8 @@ export default {
             stream.getTracks().forEach(track => track.stop());
         });
         audioChunks = [];
+        const AudioContext = window.AudioContext // default
+            || window.webkitAudioContext; // safari and old versions of Chrome
         const audioContext = new AudioContext();
         const microphone = audioContext.createMediaStreamSource(stream);
         analyser = audioContext.createAnalyser();
