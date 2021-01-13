@@ -281,6 +281,9 @@ export default {
 
     audioChunks = [];
 
+    const AudioContext = window.AudioContext // default
+      || (window as any).webkitAudioContext;// safari and old versions of Chrome
+
     const audioContext = new AudioContext();
     const microphone = audioContext.createMediaStreamSource(stream);
 
