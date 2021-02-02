@@ -167,7 +167,7 @@ export default class ExponentVideo extends React.Component<ExponentVideoProps> {
         loop={status.isLooping}
         autoPlay={status.shouldPlay}
         controls={useNativeControls}
-        style={[customStyle, style]}
+        style={[style, customStyle]}
       />
     );
   }
