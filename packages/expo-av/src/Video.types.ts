@@ -35,6 +35,7 @@ export type VideoProps = {
   source?: AVPlaybackSource; // { uri: 'http://foo/bar.mp4' }, Asset, or require('./foo/bar.mp4')
   posterSource?: ImageProps['source']; // { uri: 'http://foo/bar.mp4' } or require('./foo/bar.mp4')
   posterStyle?: ImageProps['style'];
+  videoStyle?: ImageProps['style'];
 
   // Callbacks
   onPlaybackStatusUpdate?: (status: AVPlaybackStatus) => void;

@@ -225,8 +225,9 @@ let Video = /** @class */ (() => {
                 onReadyForDisplay: this._nativeOnReadyForDisplay,
                 onFullscreenUpdate: this._nativeOnFullscreenUpdate,
             };
+            const videoStyle = StyleSheet.flatten([_STYLES.video, this.props.videoStyle]);
             return (React.createElement(View, { style: nativeProps.style, pointerEvents: "box-none" },
-                React.createElement(ExponentVideo, Object.assign({ ref: this._nativeRef }, nativeProps, { style: _STYLES.video })),
+                React.createElement(ExponentVideo, Object.assign({ ref: this._nativeRef }, nativeProps, { style: videoStyle })),
                 this._renderPoster()));
         }
     }

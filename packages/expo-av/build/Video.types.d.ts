@@ -23,6 +23,7 @@ export declare type VideoProps = {
     source?: AVPlaybackSource;
     posterSource?: ImageProps['source'];
     posterStyle?: ImageProps['style'];
+    videoStyle?: ImageProps['style'];
     onPlaybackStatusUpdate?: (status: AVPlaybackStatus) => void;
     onLoadStart?: () => void;
     onLoad?: (status: AVPlaybackStatus) => void;

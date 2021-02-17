@@ -376,9 +376,11 @@ export default class Video extends React.Component<VideoProps, VideoState> imple
       onFullscreenUpdate: this._nativeOnFullscreenUpdate,
     };
 
+    const videoStyle = StyleSheet.flatten([_STYLES.video, this.props.videoStyle])
+
     return (
       <View style={nativeProps.style} pointerEvents="box-none">
-        <ExponentVideo ref={this._nativeRef} {...nativeProps} style={_STYLES.video} />
+        <ExponentVideo ref={this._nativeRef} {...nativeProps} style={videoStyle} />
         {this._renderPoster()}
       </View>
     );
