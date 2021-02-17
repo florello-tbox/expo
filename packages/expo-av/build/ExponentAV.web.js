@@ -53,7 +53,7 @@ function getStatusFromMedia(media) {
     };
     return status;
 }
-function setStatusForMedia(media, status) {
+async function setStatusForMedia(media, status) {
     if (status.positionMillis !== undefined) {
         media.currentTime = status.positionMillis / 1000;
     }
@@ -71,7 +71,7 @@ function setStatusForMedia(media, status) {
     // }
     if (status.shouldPlay !== undefined) {
         if (status.shouldPlay) {
-            media.play();
+            await media.play();
         }
         else {
             media.pause();
@@ -97,8 +97,8 @@ let mediaRecorderDurationAlreadyRecorded = 0;
 let mediaRecorderIsRecording = false;
 let audioChunks = [];
 let analyser = null;
-let fftSize = 1024;
-let timeData = new Uint8Array(fftSize);
+const fftSize = 1024;
+const timeData = new Uint8Array(fftSize);
 function getAudioRecorderDurationMillis() {
     let duration = mediaRecorderDurationAlreadyRecorded;
     if (mediaRecorderIsRecording && mediaRecorderUptimeOfLastStartResume > 0) {
@@ -152,7 +152,7 @@ export default {
                 error: media.error.message,
             });
         };
-        const status = setStatusForMedia(media, fullInitialStatus);
+        const status = await setStatusForMedia(media, fullInitialStatus);
         return [media, status];
     },
     async unloadForSound(element) {
@@ -178,8 +178,8 @@ export default {
         if (analyser) {
             analyser.getByteTimeDomainData(timeData);
             while (i < fftSize) {
-                float = (timeData[i++] / 0x80) - 1;
-                total += (float * float);
+                float = timeData[i++] / 0x80 - 1;
+                total += float * float;
             }
             rms = Math.sqrt(total / fftSize);
             volumeLevel = 20 * (Math.log(rms) / Math.log(10));
@@ -222,8 +222,7 @@ export default {
             stream.getTracks().forEach(track => track.stop());
         });
         audioChunks = [];
-        const AudioContext = window.AudioContext // default
-            || window.webkitAudioContext; // safari and old versions of Chrome
+        const AudioContext = window.AudioContext || window.webkitAudioContext; // default // safari and old versions of Chrome
         const audioContext = new AudioContext();
         const microphone = audioContext.createMediaStreamSource(stream);
         analyser = audioContext.createAnalyser();

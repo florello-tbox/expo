@@ -63,10 +63,10 @@ function getStatusFromMedia(media?: HTMLMediaElement): AVPlaybackStatus {
   return status;
 }
 
-function setStatusForMedia(
+async function setStatusForMedia(
   media: HTMLMediaElement,
   status: AVPlaybackStatusToSet
-): AVPlaybackStatus {
+): Promise<AVPlaybackStatus> {
   if (status.positionMillis !== undefined) {
     media.currentTime = status.positionMillis / 1000;
   }
@@ -84,7 +84,7 @@ function setStatusForMedia(
   // }
   if (status.shouldPlay !== undefined) {
     if (status.shouldPlay) {
-      media.play();
+      await media.play();
     } else {
       media.pause();
     }
@@ -111,9 +111,9 @@ let mediaRecorderDurationAlreadyRecorded: number = 0;
 let mediaRecorderIsRecording: boolean = false;
 let audioChunks: Blob[] = [];
 
-let analyser: null | AnalyserNode = null
-let fftSize = 1024
-let timeData = new Uint8Array(fftSize)
+let analyser: null | AnalyserNode = null;
+const fftSize = 1024;
+const timeData = new Uint8Array(fftSize);
 
 function getAudioRecorderDurationMillis() {
   let duration = mediaRecorderDurationAlreadyRecorded;
@@ -186,7 +186,7 @@ export default {
       });
     };
 
-    const status = setStatusForMedia(media, fullInitialStatus);
+    const status = await setStatusForMedia(media, fullInitialStatus);
 
     return [media, status];
   },
@@ -212,22 +212,22 @@ export default {
   /* Recording */
   //   async setUnloadedCallbackForAndroidRecording() {},
   async getAudioRecordingStatus() {
-    let volumeLevel = 0
-    let float = 0
-    let total = 0
-    let i = 0
-    let rms = 0
+    let volumeLevel = 0;
+    let float = 0;
+    let total = 0;
+    let i = 0;
+    let rms = 0;
 
     if (analyser) {
       analyser.getByteTimeDomainData(timeData);
-      while ( i < fftSize ) {
-        float = ( timeData[i++] / 0x80 ) - 1;
-        total += ( float * float );
+      while (i < fftSize) {
+        float = timeData[i++] / 0x80 - 1;
+        total += float * float;
       }
 
       rms = Math.sqrt(total / fftSize);
 
-      volumeLevel  = 20 * ( Math.log(rms) / Math.log(10) );
+      volumeLevel = 20 * (Math.log(rms) / Math.log(10));
       // sanity check
       volumeLevel = Math.max(-48, Math.min(volumeLevel, 0));
     }
@@ -281,8 +281,7 @@ export default {
 
     audioChunks = [];
 
-    const AudioContext = window.AudioContext // default
-      || (window as any).webkitAudioContext;// safari and old versions of Chrome
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext; // default // safari and old versions of Chrome
 
     const audioContext = new AudioContext();
     const microphone = audioContext.createMediaStreamSource(stream);
@@ -295,7 +294,6 @@ export default {
 
     //analyser.connect(javascriptNode);
     //javascriptNode.connect(audioContext.destination);
-
 
     /*javascriptNode.onaudioprocess = () => {
       const array = new Uint8Array(analyser.frequencyBinCount);
@@ -376,4 +374,4 @@ export default {
   async requestPermissionsAsync(): Promise<PermissionResponse> {
     return getPermissionsAsync();
   },
- };
+};
