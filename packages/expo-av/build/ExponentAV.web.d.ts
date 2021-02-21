@@ -15,6 +15,10 @@ declare const _default: {
     setAudioMode(): Promise<void>;
     setAudioIsEnabled(): Promise<void>;
     getStatusForSound(element: HTMLMediaElement): Promise<AVPlaybackStatus>;
+    preloadForSound(nativeSource: string | {
+        [key: string]: any;
+        uri: string;
+    }): Promise<void>;
     loadForSound(nativeSource: string | {
         [key: string]: any;
         uri: string;

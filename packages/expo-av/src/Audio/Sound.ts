@@ -26,6 +26,21 @@ export class Sound implements Playback {
   _coalesceStatusUpdatesInMillis: number = 100;
   _onPlaybackStatusUpdate: ((status: AVPlaybackStatus) => void) | null = null;
 
+  static preload = async (source: AVPlaybackSource) => {
+    const { nativeSource } = await getNativeSourceAndFullInitialStatusForLoadAsync(
+      source,
+      null,
+      false
+    );
+
+    // only available on web
+    if (!ExponentAV.preloadForSound) {
+      return;
+    }
+
+    return ExponentAV.preloadForSound(nativeSource);
+  };
+
   /** @deprecated Use `Sound.createAsync()` instead */
   static create = async (
     source: AVPlaybackSource,
