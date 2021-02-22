@@ -141,14 +141,6 @@ export class Sound {
         }));
     }
 }
-Sound.preload = async (source) => {
-    const { nativeSource } = await getNativeSourceAndFullInitialStatusForLoadAsync(source, null, false);
-    // only available on web
-    if (!ExponentAV.preloadForSound) {
-        return;
-    }
-    return ExponentAV.preloadForSound(nativeSource);
-};
 /** @deprecated Use `Sound.createAsync()` instead */
 Sound.create = async (source, initialStatus = {}, onPlaybackStatusUpdate = null, downloadFirst = true) => {
     console.warn(`Sound.create is deprecated in favor of Sound.createAsync with the same API except for the new method name`);

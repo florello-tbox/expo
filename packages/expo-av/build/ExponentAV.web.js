@@ -1,8 +1,6 @@
 import { SyntheticPlatformEmitter } from '@unimodules/core';
 import { PermissionStatus } from 'unimodules-permissions-interface';
 import { RECORDING_OPTIONS_PRESET_HIGH_QUALITY } from './Audio/Recording';
-const AudioContext = window.AudioContext || window.webkitAudioContext;
-const preloadAudios = {};
 /**
  * Gets the permission details. The implementation is not very good as it actually requests
  * access to the microhpone, not all browsers support the experimental permissions api
@@ -59,6 +57,18 @@ async function setStatusForMedia(media, status) {
     if (status.positionMillis !== undefined) {
         media.currentTime = status.positionMillis / 1000;
     }
+    // if (status.progressUpdateIntervalMillis !== undefined) {
+    //   media.progressUpdateIntervalMillis = status.progressUpdateIntervalMillis;
+    // }
+    // if (status.seekMillisToleranceBefore !== undefined) {
+    //   media.seekMillisToleranceBefore = status.seekMillisToleranceBefore;
+    // }
+    // if (status.seekMillisToleranceAfter !== undefined) {
+    //   media.seekMillisToleranceAfter = status.seekMillisToleranceAfter;
+    // }
+    // if (status.shouldCorrectPitch !== undefined) {
+    //   media.shouldCorrectPitch = status.shouldCorrectPitch;
+    // }
     if (status.shouldPlay !== undefined) {
         if (status.shouldPlay) {
             await media.play();
@@ -121,23 +131,9 @@ export default {
     async getStatusForSound(element) {
         return getStatusFromMedia(element);
     },
-    async preloadForSound(nativeSource) {
-        const source = typeof nativeSource === 'string' ? nativeSource : nativeSource.uri;
-        const audio = new Audio(source);
-        await audio.play();
-        audio.pause();
-        audio.currentTime = 0;
-        preloadAudios[source] = {
-            audio,
-            readyToBeUnloaded: true,
-        };
-    },
     async loadForSound(nativeSource, fullInitialStatus) {
         const source = typeof nativeSource === 'string' ? nativeSource : nativeSource.uri;
-        const media = source in preloadAudios ? preloadAudios[source].audio : new Audio(source);
-        if (source in preloadAudios) {
-            preloadAudios[source].readyToBeUnloaded = false;
-        }
+        const media = new Audio(source);
         media.ontimeupdate = () => {
             SyntheticPlatformEmitter.emit('didUpdatePlaybackStatus', {
                 key: media,
@@ -160,13 +156,6 @@ export default {
         return [media, status];
     },
     async unloadForSound(element) {
-        const source = element.getAttribute('src');
-        // keep the sound loaded for assets that have been preloaded
-        if (source && source in preloadAudios) {
-            preloadAudios[source].readyToBeUnloaded = true;
-            element.currentTime = 0;
-            return getStatusFromMedia(element);
-        }
         element.pause();
         element.removeAttribute('src');
         element.load();
@@ -233,11 +222,27 @@ export default {
             stream.getTracks().forEach(track => track.stop());
         });
         audioChunks = [];
+        const AudioContext = window.AudioContext || window.webkitAudioContext; // default // safari and old versions of Chrome
         const audioContext = new AudioContext();
         const microphone = audioContext.createMediaStreamSource(stream);
         analyser = audioContext.createAnalyser();
         microphone.connect(analyser);
         analyser.fftSize = fftSize;
+        //const javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
+        //analyser.connect(javascriptNode);
+        //javascriptNode.connect(audioContext.destination);
+        /*javascriptNode.onaudioprocess = () => {
+          const array = new Uint8Array(analyser.frequencyBinCount);
+          analyser.getByteFrequencyData(array);
+          let values = 0;
+    
+          const length = array.length;
+          for (let i = 0; i < length; i++) {
+            values += array[i];
+          }
+    
+          volumeLevel = values / length;
+        };*/
         return { uri: null, status: await this.getAudioRecordingStatus() };
     },
     async startAudioRecording() {
